@@ -1,0 +1,31 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/projects'
+order: 1000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "  Website  ",
+      "ownerId": {{owner_id}},
+      "startDate": "2026-11-01",
+      "endDate": "2026-12-31"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 201 Created', () => pm.response.to.have.status(201));
+      const body = pm.response.json();
+      pm.test('Name is trimmed, status defaults to active', () => {
+        pm.expect(body.name).to.eql('Website');
+        pm.expect(body.status).to.eql('active');
+      });
+      pm.test('Dates are YYYY-MM-DD strings', () => {
+        pm.expect(body.startDate).to.eql('2026-11-01');
+        pm.expect(body.endDate).to.eql('2026-12-31');
+      });
+      pm.collectionVariables.set('project_id', pm.response.json().id);

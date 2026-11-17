@@ -1,0 +1,12 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/task-management/projects/{{project_id}}/labels'
+order: 6000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 200 OK', () => pm.response.to.have.status(200));
+      pm.test('Sorted by name', () => {
+        pm.expect(pm.response.json().map((l) => l.name)).to.eql(['Bug', 'UI']);
+      });

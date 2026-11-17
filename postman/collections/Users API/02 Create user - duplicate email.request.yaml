@@ -1,0 +1,23 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/users'
+order: 2000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "fullName": "Duplicate",
+      "email": "{{user_email}}",
+      "password": "{{user_password}}"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 409 Conflict', () => pm.response.to.have.status(409));
+      pm.test('Message: Email already in use', () => {
+        pm.expect(pm.response.json().message).to.eql('Email already in use');
+      });

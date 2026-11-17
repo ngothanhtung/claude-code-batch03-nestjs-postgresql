@@ -1,0 +1,19 @@
+$kind: http-request
+method: PATCH
+url: '{{base_url}}/task-management/projects/{{project_id}}/members/{{member_id}}'
+order: 4000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "memberRole": "member"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 200 OK', () => pm.response.to.have.status(200));
+      pm.test('Role updated', () => pm.expect(pm.response.json().memberRole).to.eql('member'));

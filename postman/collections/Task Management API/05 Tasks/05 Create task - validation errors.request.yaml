@@ -1,0 +1,28 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/tasks'
+order: 5000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "projectId": {{project_id}},
+      "title": "",
+      "createdBy": {{owner_id}},
+      "status": "started",
+      "position": -1,
+      "dueDate": "2026-02-30",
+      "completedAt": "2026-01-01T00:00:00Z"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));
+      pm.test('Reports every invalid / unknown field', () => {
+        const text = pm.response.json().message.join(' | ');
+        ['title', 'status', 'position', 'dueDate', 'completedAt'].forEach((f) => pm.expect(text).to.include(f));
+      });

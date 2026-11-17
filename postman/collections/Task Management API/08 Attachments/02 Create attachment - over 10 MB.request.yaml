@@ -1,0 +1,24 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/tasks/{{task_id}}/attachments'
+order: 2000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "fileName": "big.zip",
+      "fileUrl": "https://cdn.example.com/big.zip",
+      "mimeType": "application/zip",
+      "fileSize": 10485761
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));
+      pm.test('Message mentions "10 MB"', () => {
+        pm.expect(JSON.stringify(pm.response.json().message)).to.include('10 MB');
+      });

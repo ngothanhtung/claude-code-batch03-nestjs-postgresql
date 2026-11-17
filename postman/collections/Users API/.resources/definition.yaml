@@ -1,0 +1,26 @@
+$kind: collection
+name: Users API
+description: |-
+  Tests for the NestJS `task-management/users` endpoints (CRUD + validation + error cases).
+  Requests are designed to run in order: the create step stores `user_id`, `user_email`
+  and `user_password` in collection variables for the following requests.
+variables:
+  - key: base_url
+    value: 'http://localhost:3000'
+  - key: user_id
+    value: ''
+  - key: user_email
+    value: ''
+  - key: user_password
+    value: 'Password123!'
+  - key: other_user_id
+    value: ''
+  - key: other_user_email
+    value: ''
+scripts:
+  - type: http:afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Response time < 2000ms', () => {
+        pm.expect(pm.response.responseTime).to.be.below(2000);
+      });

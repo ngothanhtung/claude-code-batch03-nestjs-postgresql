@@ -1,0 +1,20 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/projects'
+order: 2000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Other project",
+      "ownerId": {{owner_id}}
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 201 Created', () => pm.response.to.have.status(201));
+      pm.collectionVariables.set('other_project_id', pm.response.json().id);

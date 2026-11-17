@@ -1,0 +1,21 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/projects/{{other_project_id}}/labels'
+order: 5000
+description: |-
+  Same name is allowed in a different project.
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Bug"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 201 Created', () => pm.response.to.have.status(201));
+      pm.collectionVariables.set('label_foreign_id', pm.response.json().id);

@@ -1,0 +1,5 @@
+$kind: collection
+name: 'Attachments'
+order: 8000
+description: |-
+  File metadata for a task (the file itself lives in external storage).

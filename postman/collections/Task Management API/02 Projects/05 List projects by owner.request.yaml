@@ -1,0 +1,14 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/task-management/projects?ownerId={{owner_id}}&status=active'
+order: 5000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 200 OK', () => pm.response.to.have.status(200));
+      const body = pm.response.json();
+      pm.test('Returns both projects of the owner', () => {
+        pm.expect(body.meta.total).to.eql(2);
+        body.data.forEach((p) => pm.expect(p.ownerId).to.eql(Number(pm.collectionVariables.get('owner_id'))));
+      });

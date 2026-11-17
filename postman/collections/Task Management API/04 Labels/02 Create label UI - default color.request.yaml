@@ -1,0 +1,20 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/projects/{{project_id}}/labels'
+order: 2000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "UI"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 201 Created', () => pm.response.to.have.status(201));
+      pm.test('Default color #64748B', () => pm.expect(pm.response.json().color).to.eql('#64748B'));
+      pm.collectionVariables.set('label_ui_id', pm.response.json().id);

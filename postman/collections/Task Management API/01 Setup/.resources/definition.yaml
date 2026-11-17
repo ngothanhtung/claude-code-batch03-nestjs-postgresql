@@ -1,0 +1,5 @@
+$kind: collection
+name: 'Setup'
+order: 1000
+description: |-
+  Creates the users this collection needs. Emails get a per-run suffix so reruns never collide.

@@ -1,0 +1,24 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/projects'
+order: 3000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Bad dates",
+      "ownerId": {{owner_id}},
+      "startDate": "2026-12-01",
+      "endDate": "2026-11-01"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));
+      pm.test('Message mentions "endDate must not be before startDate"', () => {
+        pm.expect(JSON.stringify(pm.response.json().message)).to.include('endDate must not be before startDate');
+      });

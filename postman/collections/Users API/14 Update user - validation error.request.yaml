@@ -1,0 +1,22 @@
+$kind: http-request
+method: PATCH
+url: '{{base_url}}/task-management/users/:id'
+order: 14000
+pathVariables:
+  - key: id
+    value: '{{user_id}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "bad-email",
+      "password": "123"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));

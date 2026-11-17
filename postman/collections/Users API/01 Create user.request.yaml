@@ -1,0 +1,45 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/users'
+order: 1000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "fullName": "  Nguyen Van A  ",
+      "email": "  {{user_email}}  ",
+      "password": "{{user_password}}"
+    }
+scripts:
+  - type: beforeRequest
+    language: text/javascript
+    code: |-
+      const suffix = Date.now();
+      pm.collectionVariables.set('user_email', `User.${suffix}@Example.com`);
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 201 Created', () => pm.response.to.have.status(201));
+      const body = pm.response.json();
+      pm.test('Returns user with id', () => {
+        pm.expect(body.id).to.be.a('number');
+      });
+      pm.test('fullName is trimmed', () => {
+        pm.expect(body.fullName).to.eql('Nguyen Van A');
+      });
+      pm.test('email is trimmed and lowercased', () => {
+        pm.expect(body.email).to.eql(pm.collectionVariables.get('user_email').toLowerCase());
+      });
+      pm.test('Does not expose password / passwordHash', () => {
+        pm.expect(body).to.not.have.property('password');
+        pm.expect(body).to.not.have.property('passwordHash');
+      });
+      pm.test('Has timestamps', () => {
+        pm.expect(body).to.have.property('createdAt');
+        pm.expect(body).to.have.property('updatedAt');
+      });
+      pm.collectionVariables.set('user_id', body.id);
+      pm.collectionVariables.set('user_email', body.email);

@@ -1,0 +1,19 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/task-management/users?page=1&limit=1'
+order: 7000
+queryParams:
+  - key: page
+    value: '1'
+  - key: limit
+    value: '1'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 200 OK', () => pm.response.to.have.status(200));
+      const body = pm.response.json();
+      pm.test('Returns at most 1 item', () => pm.expect(body.data.length).to.be.at.most(1));
+      pm.test('totalPages equals total when limit=1', () => {
+        pm.expect(body.meta.totalPages).to.eql(body.meta.total);
+      });

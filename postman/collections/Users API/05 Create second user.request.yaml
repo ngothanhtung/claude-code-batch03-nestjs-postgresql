@@ -1,0 +1,24 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/users'
+order: 5000
+description: Creates a second user, used to test email conflicts on update.
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "fullName": "Tran Thi B",
+      "email": "other.{{$timestamp}}@example.com",
+      "password": "Password123!"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 201 Created', () => pm.response.to.have.status(201));
+      const body = pm.response.json();
+      pm.collectionVariables.set('other_user_id', body.id);
+      pm.collectionVariables.set('other_user_email', body.email);

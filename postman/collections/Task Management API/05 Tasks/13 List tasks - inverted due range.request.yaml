@@ -1,0 +1,9 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/task-management/tasks?dueFrom=2026-12-01&dueTo=2026-11-01'
+order: 13000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));

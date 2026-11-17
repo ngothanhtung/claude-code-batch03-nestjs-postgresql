@@ -1,0 +1,21 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/projects/{{project_id}}/labels'
+order: 3000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "name": "Bug"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 409 Conflict', () => pm.response.to.have.status(409));
+      pm.test('Message mentions "already exists"', () => {
+        pm.expect(JSON.stringify(pm.response.json().message)).to.include('already exists');
+      });

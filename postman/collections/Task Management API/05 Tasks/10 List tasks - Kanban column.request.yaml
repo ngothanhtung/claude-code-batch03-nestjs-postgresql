@@ -1,0 +1,14 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/task-management/tasks?projectId={{project_id}}&status=review'
+order: 10000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 200 OK', () => pm.response.to.have.status(200));
+      const body = pm.response.json();
+      pm.test('Only review tasks of the project', () => {
+        pm.expect(body.meta.total).to.eql(1);
+        body.data.forEach((t) => pm.expect(t.status).to.eql('review'));
+      });

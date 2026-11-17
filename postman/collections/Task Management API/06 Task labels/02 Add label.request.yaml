@@ -1,0 +1,10 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/tasks/{{subtask_id}}/labels/{{label_bug_id}}'
+order: 2000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 201 Created', () => pm.response.to.have.status(201));
+      pm.test('Bug and UI', () => pm.expect(pm.response.json().map((l) => l.name)).to.eql(['Bug', 'UI']));

@@ -1,0 +1,19 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/tasks/{{task_id}}/comments'
+order: 2000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "userId": {{member_id}},
+      "content": "   "
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));

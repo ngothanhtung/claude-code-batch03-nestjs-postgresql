@@ -1,0 +1,5 @@
+$kind: collection
+name: 'Tasks'
+order: 5000
+description: |-
+  Tasks, sub-tasks, filters and the status → completedAt rule.

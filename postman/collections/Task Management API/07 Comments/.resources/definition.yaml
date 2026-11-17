@@ -1,0 +1,5 @@
+$kind: collection
+name: 'Comments'
+order: 7000
+description: |-
+  Comments on a task.

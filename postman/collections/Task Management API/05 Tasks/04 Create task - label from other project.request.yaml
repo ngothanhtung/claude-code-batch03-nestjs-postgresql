@@ -1,0 +1,24 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/tasks'
+order: 4000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "projectId": {{project_id}},
+      "title": "x",
+      "createdBy": {{owner_id}},
+      "labelIds": [{{label_foreign_id}}]
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));
+      pm.test('Message mentions "not found in project"', () => {
+        pm.expect(JSON.stringify(pm.response.json().message)).to.include('not found in project');
+      });

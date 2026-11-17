@@ -1,0 +1,5 @@
+$kind: collection
+name: 'Delete rules and cleanup'
+order: 9000
+description: |-
+  Checks ON DELETE RESTRICT / SET NULL / CASCADE, then removes everything this run created.

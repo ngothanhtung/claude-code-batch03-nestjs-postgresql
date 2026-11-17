@@ -1,0 +1,19 @@
+$kind: http-request
+method: PATCH
+url: '{{base_url}}/task-management/projects/{{project_id}}/labels/{{label_ui_id}}'
+order: 7000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "color": "#2563EB"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 200 OK', () => pm.response.to.have.status(200));
+      pm.test('Color updated', () => pm.expect(pm.response.json().color).to.eql('#2563EB'));

@@ -1,0 +1,53 @@
+$kind: collection
+name: Task Management API
+description: |-
+  Tests for the NestJS Task Management endpoints: projects, project members, labels,
+  tasks (+ task labels), comments and attachments — happy paths, validation errors
+  and the ON DELETE rules from docs/database.md.
+
+  Run the whole collection in order: "01 Setup" creates users/projects and stores
+  their ids in collection variables; "09 Cleanup" deletes everything it created.
+  Users are covered separately by the "Users API" collection.
+variables:
+  - key: base_url
+    value: 'http://localhost:3000'
+  - key: run_id
+    value: ''
+  - key: owner_id
+    value: ''
+  - key: member_id
+    value: ''
+  - key: outsider_id
+    value: ''
+  - key: creator_id
+    value: ''
+  - key: project_id
+    value: ''
+  - key: other_project_id
+    value: ''
+  - key: label_bug_id
+    value: ''
+  - key: label_ui_id
+    value: ''
+  - key: label_foreign_id
+    value: ''
+  - key: task_id
+    value: ''
+  - key: subtask_id
+    value: ''
+  - key: creator_task_id
+    value: ''
+  - key: comment_id
+    value: ''
+  - key: attachment_id
+    value: ''
+scripts:
+  - type: http:afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Response time < 2000ms', () => {
+        pm.expect(pm.response.responseTime).to.be.below(2000);
+      });
+      pm.test('Never exposes password hashes', () => {
+        pm.expect(pm.response.text()).to.not.match(/password_?hash/i);
+      });

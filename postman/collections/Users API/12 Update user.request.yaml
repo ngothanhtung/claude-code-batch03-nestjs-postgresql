@@ -1,0 +1,29 @@
+$kind: http-request
+method: PATCH
+url: '{{base_url}}/task-management/users/:id'
+order: 12000
+pathVariables:
+  - key: id
+    value: '{{user_id}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "fullName": "Nguyen Van A (updated)",
+      "password": "NewPassword456!"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 200 OK', () => pm.response.to.have.status(200));
+      const body = pm.response.json();
+      pm.test('fullName updated', () => pm.expect(body.fullName).to.eql('Nguyen Van A (updated)'));
+      pm.test('email unchanged', () => pm.expect(body.email).to.eql(pm.collectionVariables.get('user_email')));
+      pm.test('updatedAt >= createdAt', () => {
+        pm.expect(new Date(body.updatedAt).getTime()).to.be.at.least(new Date(body.createdAt).getTime());
+      });
+      pm.test('Does not expose passwordHash', () => pm.expect(body).to.not.have.property('passwordHash'));

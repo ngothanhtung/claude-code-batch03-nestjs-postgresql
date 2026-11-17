@@ -1,0 +1,24 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/projects/{{project_id}}/members'
+order: 1000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "userId": {{member_id}},
+      "memberRole": "manager"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 201 Created', () => pm.response.to.have.status(201));
+      const body = pm.response.json();
+      pm.test('Returns role and a safe user summary', () => {
+        pm.expect(body.memberRole).to.eql('manager');
+        pm.expect(body.user).to.have.all.keys('id', 'fullName', 'email');
+      });

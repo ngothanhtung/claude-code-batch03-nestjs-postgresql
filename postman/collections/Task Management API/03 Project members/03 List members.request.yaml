@@ -1,0 +1,10 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/task-management/projects/{{project_id}}/members'
+order: 3000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 200 OK', () => pm.response.to.have.status(200));
+      pm.test('One member', () => pm.expect(pm.response.json().meta.total).to.eql(1));

@@ -1,0 +1,12 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/task-management/users/:id'
+order: 11000
+pathVariables:
+  - key: id
+    value: abc
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 400 Bad Request (ParseIntPipe)', () => pm.response.to.have.status(400));

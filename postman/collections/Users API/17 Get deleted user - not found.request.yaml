@@ -1,0 +1,12 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/task-management/users/:id'
+order: 17000
+pathVariables:
+  - key: id
+    value: '{{user_id}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));

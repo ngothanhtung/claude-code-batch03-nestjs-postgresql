@@ -1,0 +1,31 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/task-management/users?page=1&limit=100'
+order: 6000
+queryParams:
+  - key: page
+    value: '1'
+  - key: limit
+    value: '100'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 200 OK', () => pm.response.to.have.status(200));
+      const body = pm.response.json();
+      pm.test('Has data array and meta', () => {
+        pm.expect(body.data).to.be.an('array');
+        pm.expect(body.meta).to.include.keys('page', 'limit', 'total', 'totalPages');
+      });
+      pm.test('meta reflects query', () => {
+        pm.expect(body.meta.page).to.eql(1);
+        pm.expect(body.meta.limit).to.eql(100);
+        pm.expect(body.meta.totalPages).to.eql(Math.ceil(body.meta.total / 100));
+      });
+      pm.test('Sorted by id ascending', () => {
+        const ids = body.data.map((u) => u.id);
+        pm.expect(ids).to.eql([...ids].sort((a, b) => a - b));
+      });
+      pm.test('No user exposes passwordHash', () => {
+        body.data.forEach((u) => pm.expect(u).to.not.have.property('passwordHash'));
+      });

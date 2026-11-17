@@ -1,0 +1,23 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/tasks'
+order: 2000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "projectId": {{project_id}},
+      "title": "Header",
+      "createdBy": {{owner_id}},
+      "parentId": {{task_id}}
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 201 Created', () => pm.response.to.have.status(201));
+      pm.test('Linked to parent', () => pm.expect(pm.response.json().parentId).to.eql(Number(pm.collectionVariables.get('task_id'))));
+      pm.collectionVariables.set('subtask_id', pm.response.json().id);

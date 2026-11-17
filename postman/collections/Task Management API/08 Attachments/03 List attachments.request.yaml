@@ -1,0 +1,10 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/task-management/tasks/{{task_id}}/attachments'
+order: 3000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 200 OK', () => pm.response.to.have.status(200));
+      pm.test('One attachment', () => pm.expect(pm.response.json()).to.have.lengthOf(1));

@@ -1,0 +1,13 @@
+$kind: http-request
+method: DELETE
+url: '{{base_url}}/task-management/users/:id'
+order: 16000
+pathVariables:
+  - key: id
+    value: '{{user_id}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 204 No Content', () => pm.response.to.have.status(204));
+      pm.test('Empty body', () => pm.expect(pm.response.text()).to.be.empty);

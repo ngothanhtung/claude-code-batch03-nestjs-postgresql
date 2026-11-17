@@ -1,0 +1,15 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/task-management/users/:id'
+order: 10000
+pathVariables:
+  - key: id
+    value: '999999999'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));
+      pm.test('Message mentions the id', () => {
+        pm.expect(pm.response.json().message).to.eql('User #999999999 not found');
+      });

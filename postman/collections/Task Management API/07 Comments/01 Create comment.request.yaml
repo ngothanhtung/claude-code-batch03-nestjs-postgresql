@@ -1,0 +1,25 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/tasks/{{task_id}}/comments'
+order: 1000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "userId": {{member_id}},
+      "content": "  Header is done  "
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 201 Created', () => pm.response.to.have.status(201));
+      const body = pm.response.json();
+      pm.test('Content trimmed, author summary included', () => {
+        pm.expect(body.content).to.eql('Header is done');
+        pm.expect(body.user).to.have.all.keys('id', 'fullName', 'email');
+      });
+      pm.collectionVariables.set('comment_id', pm.response.json().id);

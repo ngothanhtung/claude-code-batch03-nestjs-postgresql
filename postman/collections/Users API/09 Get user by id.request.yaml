@@ -1,0 +1,20 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/task-management/users/:id'
+order: 9000
+pathVariables:
+  - key: id
+    value: '{{user_id}}'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 200 OK', () => pm.response.to.have.status(200));
+      const body = pm.response.json();
+      pm.test('Returns the created user', () => {
+        pm.expect(body.id).to.eql(Number(pm.collectionVariables.get('user_id')));
+        pm.expect(body.email).to.eql(pm.collectionVariables.get('user_email'));
+      });
+      pm.test('Does not expose passwordHash', () => {
+        pm.expect(body).to.not.have.property('passwordHash');
+      });

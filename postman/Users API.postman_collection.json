@@ -1,0 +1,929 @@
+{
+  "info": {
+    "name": "Users API",
+    "description": "Tests for the NestJS `task-management/users` endpoints (CRUD + validation + error cases).\nRequests are designed to run in order: the create step stores `user_id`, `user_email`\nand `user_password` in collection variables for the following requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 Create user",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/task-management/users",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "task-management",
+            "users"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"  Nguyen Van A  \",\n  \"email\": \"  {{user_email}}  \",\n  \"password\": \"{{user_password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const suffix = Date.now();",
+              "pm.collectionVariables.set('user_email', `User.${suffix}@Example.com`);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+              "const body = pm.response.json();",
+              "pm.test('Returns user with id', () => {",
+              "  pm.expect(body.id).to.be.a('number');",
+              "});",
+              "pm.test('fullName is trimmed', () => {",
+              "  pm.expect(body.fullName).to.eql('Nguyen Van A');",
+              "});",
+              "pm.test('email is trimmed and lowercased', () => {",
+              "  pm.expect(body.email).to.eql(pm.collectionVariables.get('user_email').toLowerCase());",
+              "});",
+              "pm.test('Does not expose password / passwordHash', () => {",
+              "  pm.expect(body).to.not.have.property('password');",
+              "  pm.expect(body).to.not.have.property('passwordHash');",
+              "});",
+              "pm.test('Has timestamps', () => {",
+              "  pm.expect(body).to.have.property('createdAt');",
+              "  pm.expect(body).to.have.property('updatedAt');",
+              "});",
+              "pm.collectionVariables.set('user_id', body.id);",
+              "pm.collectionVariables.set('user_email', body.email);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Create user - duplicate email",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/task-management/users",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "task-management",
+            "users"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"Duplicate\",\n  \"email\": \"{{user_email}}\",\n  \"password\": \"{{user_password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 409 Conflict', () => pm.response.to.have.status(409));",
+              "pm.test('Message: Email already in use', () => {",
+              "  pm.expect(pm.response.json().message).to.eql('Email already in use');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Create user - validation errors",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/task-management/users",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "task-management",
+            "users"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"\",\n  \"email\": \"not-an-email\",\n  \"password\": \"short\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));",
+              "const messages = pm.response.json().message;",
+              "pm.test('Reports errors for fullName, email and password', () => {",
+              "  pm.expect(messages).to.be.an('array');",
+              "  const text = messages.join(' | ');",
+              "  pm.expect(text).to.include('fullName');",
+              "  pm.expect(text).to.include('email');",
+              "  pm.expect(text).to.include('password');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Create user - unknown field rejected",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/task-management/users",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "task-management",
+            "users"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"Hacker\",\n  \"email\": \"hacker.{{$timestamp}}@example.com\",\n  \"password\": \"Password123!\",\n  \"passwordHash\": \"injected\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 400 Bad Request (forbidNonWhitelisted)', () => pm.response.to.have.status(400));",
+              "pm.test('Mentions the forbidden property', () => {",
+              "  pm.expect(pm.response.json().message.join(' ')).to.include('passwordHash');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Create second user",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/task-management/users",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "task-management",
+            "users"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"Tran Thi B\",\n  \"email\": \"other.{{$timestamp}}@example.com\",\n  \"password\": \"Password123!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "description": "Creates a second user, used to test email conflicts on update."
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set('other_user_id', body.id);",
+              "pm.collectionVariables.set('other_user_email', body.email);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 List users",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/task-management/users?page=1&limit=100",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "task-management",
+            "users"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('Has data array and meta', () => {",
+              "  pm.expect(body.data).to.be.an('array');",
+              "  pm.expect(body.meta).to.include.keys('page', 'limit', 'total', 'totalPages');",
+              "});",
+              "pm.test('meta reflects query', () => {",
+              "  pm.expect(body.meta.page).to.eql(1);",
+              "  pm.expect(body.meta.limit).to.eql(100);",
+              "  pm.expect(body.meta.totalPages).to.eql(Math.ceil(body.meta.total / 100));",
+              "});",
+              "pm.test('Sorted by id ascending', () => {",
+              "  const ids = body.data.map((u) => u.id);",
+              "  pm.expect(ids).to.eql([...ids].sort((a, b) => a - b));",
+              "});",
+              "pm.test('No user exposes passwordHash', () => {",
+              "  body.data.forEach((u) => pm.expect(u).to.not.have.property('passwordHash'));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 List users - pagination",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/task-management/users?page=1&limit=1",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "task-management",
+            "users"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "1"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('Returns at most 1 item', () => pm.expect(body.data.length).to.be.at.most(1));",
+              "pm.test('totalPages equals total when limit=1', () => {",
+              "  pm.expect(body.meta.totalPages).to.eql(body.meta.total);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 List users - invalid query",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/task-management/users?page=0&limit=101",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "task-management",
+            "users"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "0"
+            },
+            {
+              "key": "limit",
+              "value": "101"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));",
+              "pm.test('Reports page and limit errors', () => {",
+              "  const text = pm.response.json().message.join(' | ');",
+              "  pm.expect(text).to.include('page');",
+              "  pm.expect(text).to.include('limit');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Get user by id",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/task-management/users/:id",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "task-management",
+            "users",
+            ":id"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": "{{user_id}}"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('Returns the created user', () => {",
+              "  pm.expect(body.id).to.eql(Number(pm.collectionVariables.get('user_id')));",
+              "  pm.expect(body.email).to.eql(pm.collectionVariables.get('user_email'));",
+              "});",
+              "pm.test('Does not expose passwordHash', () => {",
+              "  pm.expect(body).to.not.have.property('passwordHash');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 Get user - not found",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/task-management/users/:id",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "task-management",
+            "users",
+            ":id"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": "999999999"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));",
+              "pm.test('Message mentions the id', () => {",
+              "  pm.expect(pm.response.json().message).to.eql('User #999999999 not found');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 Get user - invalid id",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/task-management/users/:id",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "task-management",
+            "users",
+            ":id"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": "abc"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 400 Bad Request (ParseIntPipe)', () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 Update user",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/task-management/users/:id",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "task-management",
+            "users",
+            ":id"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": "{{user_id}}"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"Nguyen Van A (updated)\",\n  \"password\": \"NewPassword456!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.test('fullName updated', () => pm.expect(body.fullName).to.eql('Nguyen Van A (updated)'));",
+              "pm.test('email unchanged', () => pm.expect(body.email).to.eql(pm.collectionVariables.get('user_email')));",
+              "pm.test('updatedAt >= createdAt', () => {",
+              "  pm.expect(new Date(body.updatedAt).getTime()).to.be.at.least(new Date(body.createdAt).getTime());",
+              "});",
+              "pm.test('Does not expose passwordHash', () => pm.expect(body).to.not.have.property('passwordHash'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 Update user - email conflict",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/task-management/users/:id",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "task-management",
+            "users",
+            ":id"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": "{{user_id}}"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{other_user_email}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 409 Conflict', () => pm.response.to.have.status(409));",
+              "pm.test('Message: Email already in use', () => {",
+              "  pm.expect(pm.response.json().message).to.eql('Email already in use');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 Update user - validation error",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/task-management/users/:id",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "task-management",
+            "users",
+            ":id"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": "{{user_id}}"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"bad-email\",\n  \"password\": \"123\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 Update user - not found",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/task-management/users/:id",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "task-management",
+            "users",
+            ":id"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": "999999999"
+            }
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fullName\": \"Nobody\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 Delete user",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/task-management/users/:id",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "task-management",
+            "users",
+            ":id"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": "{{user_id}}"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 204 No Content', () => pm.response.to.have.status(204));",
+              "pm.test('Empty body', () => pm.expect(pm.response.text()).to.be.empty);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17 Get deleted user - not found",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/task-management/users/:id",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "task-management",
+            "users",
+            ":id"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": "{{user_id}}"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18 Delete user - not found",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/task-management/users/:id",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "task-management",
+            "users",
+            ":id"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": "{{user_id}}"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 404 Not Found (already deleted)', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "19 Cleanup - delete second user",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/task-management/users/:id",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "task-management",
+            "users",
+            ":id"
+          ],
+          "variable": [
+            {
+              "key": "id",
+              "value": "{{other_user_id}}"
+            }
+          ]
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Status 204 No Content', () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.test('Response time < 2000ms', () => {",
+          "  pm.expect(pm.response.responseTime).to.be.below(2000);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "user_id",
+      "value": ""
+    },
+    {
+      "key": "user_email",
+      "value": ""
+    },
+    {
+      "key": "user_password",
+      "value": "Password123!"
+    },
+    {
+      "key": "other_user_id",
+      "value": ""
+    },
+    {
+      "key": "other_user_email",
+      "value": ""
+    }
+  ]
+}

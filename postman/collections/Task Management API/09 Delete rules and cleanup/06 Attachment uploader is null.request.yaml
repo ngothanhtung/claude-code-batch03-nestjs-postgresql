@@ -1,0 +1,10 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/task-management/tasks/{{task_id}}/attachments/{{attachment_id}}'
+order: 6000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 200 OK', () => pm.response.to.have.status(200));
+      pm.test('uploadedBy is null', () => pm.expect(pm.response.json().uploadedBy).to.eql(null));

@@ -1,0 +1,24 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/tasks/{{task_id}}/attachments'
+order: 1000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "fileName": "home-v2.png",
+      "fileUrl": "https://cdn.example.com/home-v2.png",
+      "mimeType": "image/png",
+      "fileSize": 248000,
+      "uploadedBy": {{member_id}}
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 201 Created', () => pm.response.to.have.status(201));
+      pm.test('Uploader summary included', () => pm.expect(pm.response.json().uploader.id).to.eql(Number(pm.collectionVariables.get('member_id'))));
+      pm.collectionVariables.set('attachment_id', pm.response.json().id);

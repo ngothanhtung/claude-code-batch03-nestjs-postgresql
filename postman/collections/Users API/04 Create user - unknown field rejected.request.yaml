@@ -1,0 +1,24 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/users'
+order: 4000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "fullName": "Hacker",
+      "email": "hacker.{{$timestamp}}@example.com",
+      "password": "Password123!",
+      "passwordHash": "injected"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 400 Bad Request (forbidNonWhitelisted)', () => pm.response.to.have.status(400));
+      pm.test('Mentions the forbidden property', () => {
+        pm.expect(pm.response.json().message.join(' ')).to.include('passwordHash');
+      });

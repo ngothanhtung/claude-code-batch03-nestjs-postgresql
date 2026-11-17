@@ -1,0 +1,18 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/projects/{{project_id}}/members'
+order: 2000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "userId": {{member_id}}
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 409 Conflict', () => pm.response.to.have.status(409));

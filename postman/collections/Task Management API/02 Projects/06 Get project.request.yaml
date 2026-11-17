@@ -1,0 +1,10 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/task-management/projects/{{project_id}}'
+order: 6000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 200 OK', () => pm.response.to.have.status(200));
+      pm.test('Returns the project', () => pm.expect(pm.response.json().id).to.eql(Number(pm.collectionVariables.get('project_id'))));

@@ -1,0 +1,28 @@
+$kind: http-request
+method: POST
+url: '{{base_url}}/task-management/users'
+order: 3000
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "fullName": "",
+      "email": "not-an-email",
+      "password": "short"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));
+      const messages = pm.response.json().message;
+      pm.test('Reports errors for fullName, email and password', () => {
+        pm.expect(messages).to.be.an('array');
+        const text = messages.join(' | ');
+        pm.expect(text).to.include('fullName');
+        pm.expect(text).to.include('email');
+        pm.expect(text).to.include('password');
+      });

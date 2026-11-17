@@ -1,0 +1,5 @@
+$kind: collection
+name: 'Projects'
+order: 2000
+description: |-
+  CRUD and validation for /projects.

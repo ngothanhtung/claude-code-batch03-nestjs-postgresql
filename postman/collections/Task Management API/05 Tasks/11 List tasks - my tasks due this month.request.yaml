@@ -1,0 +1,10 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/task-management/tasks?assigneeId={{member_id}}&dueFrom=2026-11-01&dueTo=2026-11-30'
+order: 11000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 200 OK', () => pm.response.to.have.status(200));
+      pm.test('Finds the assigned task', () => pm.expect(pm.response.json().meta.total).to.eql(1));

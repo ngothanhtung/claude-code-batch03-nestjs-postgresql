@@ -1,0 +1,5 @@
+$kind: collection
+name: 'Labels'
+order: 4000
+description: |-
+  Per-project labels: unique name per project, #RRGGBB color.

@@ -1,0 +1,9 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/task-management/tasks/{{subtask_id}}'
+order: 11000
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 404 Not Found', () => pm.response.to.have.status(404));

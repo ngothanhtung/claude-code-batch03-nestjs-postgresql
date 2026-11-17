@@ -1,0 +1,5 @@
+$kind: collection
+name: 'Project members'
+order: 3000
+description: |-
+  Membership of users in a project (project_members).

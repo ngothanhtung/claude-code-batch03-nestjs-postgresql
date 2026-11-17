@@ -1,0 +1,5 @@
+$kind: collection
+name: 'Task labels'
+order: 6000
+description: |-
+  Attach / detach labels on a task (task_labels join table).

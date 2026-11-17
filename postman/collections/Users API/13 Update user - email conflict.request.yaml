@@ -1,0 +1,24 @@
+$kind: http-request
+method: PATCH
+url: '{{base_url}}/task-management/users/:id'
+order: 13000
+pathVariables:
+  - key: id
+    value: '{{user_id}}'
+headers:
+  - key: Content-Type
+    value: application/json
+body:
+  type: json
+  content: |-
+    {
+      "email": "{{other_user_email}}"
+    }
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 409 Conflict', () => pm.response.to.have.status(409));
+      pm.test('Message: Email already in use', () => {
+        pm.expect(pm.response.json().message).to.eql('Email already in use');
+      });

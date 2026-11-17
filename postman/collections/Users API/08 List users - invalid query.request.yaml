@@ -1,0 +1,19 @@
+$kind: http-request
+method: GET
+url: '{{base_url}}/task-management/users?page=0&limit=101'
+order: 8000
+queryParams:
+  - key: page
+    value: '0'
+  - key: limit
+    value: '101'
+scripts:
+  - type: afterResponse
+    language: text/javascript
+    code: |-
+      pm.test('Status 400 Bad Request', () => pm.response.to.have.status(400));
+      pm.test('Reports page and limit errors', () => {
+        const text = pm.response.json().message.join(' | ');
+        pm.expect(text).to.include('page');
+        pm.expect(text).to.include('limit');
+      });
