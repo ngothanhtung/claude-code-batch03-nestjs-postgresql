@@ -5,9 +5,11 @@ import { ProjectMembersModule } from '../project-members/project-members.module'
 import { ProjectsModule } from '../projects/projects.module';
 import { UsersModule } from '../users/users.module';
 import { Task } from './entities/task.entity';
+import { ProjectTasksController } from './project-tasks.controller';
 import { TaskLabelsService } from './task-labels.service';
 import { TasksController } from './tasks.controller';
 import { TasksService } from './tasks.service';
+import { UserTasksController } from './user-tasks.controller';
 
 @Module({
   imports: [
@@ -17,7 +19,7 @@ import { TasksService } from './tasks.service';
     ProjectMembersModule,
     LabelsModule,
   ],
-  controllers: [TasksController],
+  controllers: [TasksController, ProjectTasksController, UserTasksController],
   providers: [TasksService, TaskLabelsService],
   exports: [TasksService],
 })

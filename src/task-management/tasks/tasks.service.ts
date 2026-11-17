@@ -9,6 +9,7 @@ import {
   FindOptionsWhere,
   LessThanOrEqual,
   MoreThanOrEqual,
+  Not,
   Repository,
 } from 'typeorm';
 import { TaskStatus } from '../../database/enums';
@@ -17,7 +18,9 @@ import { LabelsService } from '../labels/labels.service';
 import { ProjectMembersService } from '../project-members/project-members.service';
 import { ProjectsService } from '../projects/projects.service';
 import { UsersService } from '../users/users.service';
+import { AssignedTasksQueryDto } from './dto/assigned-tasks-query.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
+import { DueSoonTasksQueryDto } from './dto/due-soon-tasks-query.dto';
 import { ListTasksQueryDto } from './dto/list-tasks-query.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { Task } from './entities/task.entity';
@@ -34,6 +37,31 @@ const FK_MESSAGES: Record<string, string> = {
 function sortLabels(task: Task): Task {
   task.labels?.sort((a, b) => a.name.localeCompare(b.name));
   return task;
+}
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+/** Local calendar date as `YYYY-MM-DD` (same form as the `due_date` column). */
+function toDateOnly(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function addDays(dateOnly: string, days: number): string {
+  const [y, m, d] = dateOnly.split('-').map(Number);
+  return toDateOnly(new Date(y, m - 1, d + days));
+}
+
+/** Whole days from `from` to `to` (both `YYYY-MM-DD`), DST-safe via UTC. */
+function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(to) - Date.parse(from)) / MS_PER_DAY);
+}
+
+export interface DueSoonTask {
+  task: Task;
+  daysRemaining: number;
 }
 
 @Injectable()
@@ -114,6 +142,81 @@ export class TasksService {
       where,
       relations: { labels: true },
       order: { position: 'ASC', id: 'ASC' },
+      skip: (query.page - 1) * query.limit,
+      take: query.limit,
+    });
+    items.forEach(sortLabels);
+    return { items, total };
+  }
+
+  /**
+   * Unfinished tasks of a project due within `[today, today + days]`,
+   * most urgent first. "Today" is the server's local date. Served by
+   * idx_tasks_project_status / idx_tasks_due_date.
+   */
+  async findDueSoon(
+    projectId: number,
+    query: DueSoonTasksQueryDto,
+  ): Promise<{ items: DueSoonTask[]; total: number }> {
+    if (!(await this.projectsService.exists(projectId))) {
+      throw new NotFoundException(`Project #${projectId} not found`);
+    }
+
+    const today = toDateOnly(new Date());
+    const until = addDays(today, query.days);
+
+    // Same no-N+1 / no-label-ordering constraints as findAll.
+    const [tasks, total] = await this.tasksRepository.findAndCount({
+      where: {
+        projectId,
+        status: Not(TaskStatus.DONE),
+        dueDate: Between(today, until),
+      },
+      relations: { labels: true },
+      order: { dueDate: 'ASC', priority: 'DESC', id: 'ASC' },
+      skip: (query.page - 1) * query.limit,
+      take: query.limit,
+    });
+
+    const items = tasks.map((task) => ({
+      task: sortLabels(task),
+      // dueDate is non-null here: it is constrained by Between above.
+      daysRemaining: daysBetween(today, task.dueDate!),
+    }));
+    return { items, total };
+  }
+
+  /**
+   * Tasks assigned to a user across all projects ("my tasks"), each with its
+   * project loaded. Unfinished by default; tasks with the nearest due date
+   * first, undated ones last. Served by idx_tasks_assignee.
+   */
+  async findAssigned(
+    userId: number,
+    query: AssignedTasksQueryDto,
+  ): Promise<{ items: Task[]; total: number }> {
+    if (!(await this.usersService.exists(userId))) {
+      throw new NotFoundException(`User #${userId} not found`);
+    }
+
+    const where: FindOptionsWhere<Task> = { assigneeId: userId };
+    if (query.projectId) where.projectId = query.projectId;
+    if (query.priority) where.priority = query.priority;
+    if (query.status) {
+      where.status = query.status;
+    } else if (!query.includeDone) {
+      where.status = Not(TaskStatus.DONE);
+    }
+
+    // Same no-N+1 / no-label-ordering constraints as findAll.
+    const [items, total] = await this.tasksRepository.findAndCount({
+      where,
+      relations: { labels: true, project: true },
+      order: {
+        dueDate: { direction: 'ASC', nulls: 'LAST' },
+        priority: 'DESC',
+        id: 'ASC',
+      },
       skip: (query.page - 1) * query.limit,
       take: query.limit,
     });

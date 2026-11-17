@@ -337,6 +337,202 @@ describe('Task Management (e2e)', () => {
     });
   });
 
+  describe('due-soon tasks of a project', () => {
+    let dueProject: number;
+    const dueSoon = () => `${base}/projects/${dueProject}/tasks/due-soon`;
+
+    /** Server-local date `offset` days from today, as `YYYY-MM-DD`. */
+    const inDays = (offset: number) => {
+      const d = new Date();
+      d.setDate(d.getDate() + offset);
+      return [
+        d.getFullYear(),
+        String(d.getMonth() + 1).padStart(2, '0'),
+        String(d.getDate()).padStart(2, '0'),
+      ].join('-');
+    };
+
+    beforeAll(async () => {
+      dueProject = (
+        await api()
+          .post(`${base}/projects`)
+          .send({ name: 'Deadlines', ownerId: owner })
+          .expect(201)
+      ).body.id;
+      const tasks = [
+        { title: 'overdue', dueDate: inDays(-1) },
+        { title: 'today', dueDate: inDays(0), priority: 'low' },
+        { title: 'today-urgent', dueDate: inDays(0), priority: 'urgent' },
+        { title: 'in-3', dueDate: inDays(3) },
+        { title: 'in-3-done', dueDate: inDays(3), status: 'done' },
+        { title: 'in-10', dueDate: inDays(10) },
+        { title: 'no-due' },
+      ];
+      for (const t of tasks) {
+        await api()
+          .post(`${base}/tasks`)
+          .send({ projectId: dueProject, createdBy: owner, ...t })
+          .expect(201);
+      }
+    });
+
+    it('lists unfinished tasks due within n days, most urgent first', async () => {
+      const res = await api().get(dueSoon()).query({ days: 3 }).expect(200);
+      expect(
+        res.body.data.map((t: { title: string; daysRemaining: number }) => [
+          t.title,
+          t.daysRemaining,
+        ]),
+      ).toEqual([
+        ['today-urgent', 0],
+        ['today', 0],
+        ['in-3', 3],
+      ]);
+      expect(res.body.meta).toEqual({
+        page: 1,
+        limit: 20,
+        total: 3,
+        totalPages: 1,
+      });
+    });
+
+    it('defaults to 7 days and supports days=0 and pagination', async () => {
+      await api()
+        .get(dueSoon())
+        .expect(200)
+        .expect(({ body }) => expect(body.meta.total).toBe(3));
+      await api()
+        .get(dueSoon())
+        .query({ days: 0 })
+        .expect(200)
+        .expect(({ body }) => expect(body.meta.total).toBe(2));
+      await api()
+        .get(dueSoon())
+        .query({ days: 30, page: 2, limit: 3 })
+        .expect(200)
+        .expect(({ body }) =>
+          expect(body.data.map((t: { title: string }) => t.title)).toEqual([
+            'in-10',
+          ]),
+        );
+    });
+
+    it('validates days and the project', async () => {
+      for (const days of ['-1', '366', 'abc', '1.5']) {
+        await api().get(dueSoon()).query({ days }).expect(400);
+      }
+      await api().get(`${base}/projects/999999/tasks/due-soon`).expect(404);
+      await api().get(`${base}/projects/abc/tasks/due-soon`).expect(400);
+    });
+  });
+
+  describe('my tasks across projects', () => {
+    let me: number;
+    let alpha: number;
+    let beta: number;
+    const myTasks = () => `${base}/users/${me}/tasks`;
+    const titles = (body: { data: { title: string }[] }) =>
+      body.data.map((t) => t.title);
+
+    beforeAll(async () => {
+      me = await createUser('Me', 'me@example.com');
+      const createProject = async (name: string) => {
+        const id = (
+          await api()
+            .post(`${base}/projects`)
+            .send({ name, ownerId: owner })
+            .expect(201)
+        ).body.id as number;
+        await api()
+          .post(`${base}/projects/${id}/members`)
+          .send({ userId: me })
+          .expect(201);
+        return id;
+      };
+      alpha = await createProject('Alpha');
+      beta = await createProject('Beta');
+
+      const tasks = [
+        { projectId: alpha, title: 'a-later', dueDate: '2030-02-01' },
+        { projectId: beta, title: 'b-no-due', priority: 'urgent' },
+        {
+          projectId: beta,
+          title: 'b-soon',
+          dueDate: '2030-01-01',
+          priority: 'high',
+        },
+        { projectId: alpha, title: 'a-soon', dueDate: '2030-01-01' },
+        { projectId: alpha, title: 'a-done', status: 'done' },
+      ];
+      for (const t of tasks) {
+        await api()
+          .post(`${base}/tasks`)
+          .send({ createdBy: owner, assigneeId: me, ...t })
+          .expect(201);
+      }
+      // Not assigned to me: must never show up.
+      await api()
+        .post(`${base}/tasks`)
+        .send({ projectId: alpha, title: 'not-mine', createdBy: owner })
+        .expect(201);
+    });
+
+    it('lists my unfinished tasks from all projects, nearest due first', async () => {
+      const res = await api().get(myTasks()).expect(200);
+      expect(titles(res.body)).toEqual([
+        'b-soon',
+        'a-soon',
+        'a-later',
+        'b-no-due',
+      ]);
+      expect(res.body.meta.total).toBe(4);
+      expect(res.body.data[0]).toMatchObject({
+        assigneeId: me,
+        projectId: beta,
+        project: { id: beta, name: 'Beta', status: 'active' },
+        labels: [],
+      });
+    });
+
+    it('filters by includeDone, status, priority and project', async () => {
+      await api()
+        .get(myTasks())
+        .query({ includeDone: 'true' })
+        .expect(200)
+        .expect(({ body }) => expect(body.meta.total).toBe(5));
+      await api()
+        .get(myTasks())
+        .query({ status: 'done' })
+        .expect(200)
+        .expect(({ body }) => expect(titles(body)).toEqual(['a-done']));
+      await api()
+        .get(myTasks())
+        .query({ priority: 'urgent' })
+        .expect(200)
+        .expect(({ body }) => expect(titles(body)).toEqual(['b-no-due']));
+      await api()
+        .get(myTasks())
+        .query({ projectId: alpha, page: 2, limit: 1 })
+        .expect(200)
+        .expect(({ body }) => {
+          expect(titles(body)).toEqual(['a-later']);
+          expect(body.meta).toMatchObject({ total: 2, totalPages: 2 });
+        });
+    });
+
+    it('validates the query and the user', async () => {
+      for (const query of [
+        { includeDone: 'yes' },
+        { status: 'blocked' },
+        { projectId: 0 },
+      ]) {
+        await api().get(myTasks()).query(query).expect(400);
+      }
+      await api().get(`${base}/users/999999/tasks`).expect(404);
+      await api().get(`${base}/users/abc/tasks`).expect(400);
+    });
+  });
+
   describe('task labels', () => {
     const taskLabels = () => `${base}/tasks/${subtask}/labels`;
     const names = (body: { name: string }[]) => body.map((l) => l.name);

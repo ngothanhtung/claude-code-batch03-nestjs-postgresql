@@ -1,4 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { Between, Not } from 'typeorm';
 import { Test } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import {
@@ -13,7 +14,9 @@ import { LabelsService } from '../labels/labels.service';
 import { ProjectMembersService } from '../project-members/project-members.service';
 import { ProjectsService } from '../projects/projects.service';
 import { UsersService } from '../users/users.service';
+import { AssignedTasksQueryDto } from './dto/assigned-tasks-query.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
+import { DueSoonTasksQueryDto } from './dto/due-soon-tasks-query.dto';
 import { ListTasksQueryDto } from './dto/list-tasks-query.dto';
 import { Task } from './entities/task.entity';
 import { TasksService } from './tasks.service';
@@ -227,6 +230,122 @@ describe('TasksService', () => {
           dueTo: '2026-11-01',
         }),
       ).rejects.toThrow('dueTo must not be before dueFrom');
+    });
+  });
+
+  describe('findAssigned', () => {
+    const query = new AssignedTasksQueryDto();
+
+    beforeEach(() => repo.findAndCount.mockResolvedValue([[], 0]));
+    const whereOf = (): unknown =>
+      (repo.findAndCount.mock.calls[0][0] as { where: unknown }).where;
+
+    it('throws 404 when the user does not exist', async () => {
+      usersService.exists.mockResolvedValue(false);
+      await expect(service.findAssigned(99, query)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(repo.findAndCount).not.toHaveBeenCalled();
+    });
+
+    it('hides done tasks by default, across all projects', async () => {
+      await service.findAssigned(5, query);
+
+      expect(whereOf()).toEqual({
+        assigneeId: 5,
+        status: Not(TaskStatus.DONE),
+      });
+      const options = repo.findAndCount.mock.calls[0][0];
+      expect(options.relations).toEqual({ labels: true, project: true });
+      expect(options.order).toEqual({
+        dueDate: { direction: 'ASC', nulls: 'LAST' },
+        priority: 'DESC',
+        id: 'ASC',
+      });
+      expect(options).toMatchObject({ skip: 0, take: 20 });
+    });
+
+    it('includes done tasks when includeDone is set', async () => {
+      await service.findAssigned(5, { ...query, includeDone: true });
+      expect(whereOf()).toEqual({ assigneeId: 5 });
+    });
+
+    it('applies explicit filters; status overrides includeDone', async () => {
+      await service.findAssigned(5, {
+        ...query,
+        projectId: 2,
+        priority: TaskPriority.HIGH,
+        status: TaskStatus.DONE,
+      });
+      expect(whereOf()).toEqual({
+        assigneeId: 5,
+        projectId: 2,
+        priority: TaskPriority.HIGH,
+        status: TaskStatus.DONE,
+      });
+    });
+
+    it("sorts each task's labels by name", async () => {
+      const task = makeTask({ labels: [label(2, 'UI'), label(1, 'Bug')] });
+      repo.findAndCount.mockResolvedValue([[task], 1]);
+
+      const result = await service.findAssigned(5, query);
+
+      expect(result.total).toBe(1);
+      expect(task.labels!.map((l) => l.name)).toEqual(['Bug', 'UI']);
+    });
+  });
+
+  describe('findDueSoon', () => {
+    const query = Object.assign(new DueSoonTasksQueryDto(), { days: 7 });
+
+    beforeEach(() => {
+      jest.useFakeTimers({ now: new Date(2026, 11, 28, 15, 30) });
+    });
+    afterEach(() => jest.useRealTimers());
+
+    it('throws 404 when the project does not exist', async () => {
+      projectsService.exists.mockResolvedValue(false);
+      await expect(service.findDueSoon(99, query)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(repo.findAndCount).not.toHaveBeenCalled();
+    });
+
+    it('filters unfinished tasks due within [today, today + days]', async () => {
+      repo.findAndCount.mockResolvedValue([[], 0]);
+
+      await service.findDueSoon(1, query);
+
+      const options = repo.findAndCount.mock.calls[0][0];
+      // Window crosses a month and year boundary.
+      expect(options.where).toEqual({
+        projectId: 1,
+        status: Not(TaskStatus.DONE),
+        dueDate: Between('2026-12-28', '2027-01-04'),
+      });
+      expect(options).toMatchObject({ skip: 0, take: 20 });
+      expect(options.order).toEqual({
+        dueDate: 'ASC',
+        priority: 'DESC',
+        id: 'ASC',
+      });
+    });
+
+    it('computes daysRemaining and sorts labels', async () => {
+      const today = makeTask({ id: 1, dueDate: '2026-12-28' });
+      const later = makeTask({
+        id: 2,
+        dueDate: '2027-01-04',
+        labels: [label(2, 'UI'), label(1, 'Bug')],
+      });
+      repo.findAndCount.mockResolvedValue([[today, later], 2]);
+
+      const result = await service.findDueSoon(1, query);
+
+      expect(result.total).toBe(2);
+      expect(result.items.map((i) => i.daysRemaining)).toEqual([0, 7]);
+      expect(later.labels!.map((l) => l.name)).toEqual(['Bug', 'UI']);
     });
   });
 
