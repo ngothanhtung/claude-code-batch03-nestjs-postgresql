@@ -11,6 +11,8 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
+import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
 import { toPaginated } from '../common/dto/paginated-response.dto';
 import { AddProjectMemberDto } from './dto/add-project-member.dto';
 import { ListProjectMembersQueryDto } from './dto/list-project-members-query.dto';
@@ -21,6 +23,7 @@ import {
 import { UpdateProjectMemberDto } from './dto/update-project-member.dto';
 import { ProjectMembersService } from './project-members.service';
 
+@ApiTags('Project members')
 @Controller('task-management/projects/:projectId/members')
 export class ProjectMembersController {
   constructor(private readonly membersService: ProjectMembersService) {}
@@ -36,6 +39,7 @@ export class ProjectMembersController {
   }
 
   @Get()
+  @ApiPaginatedResponse(ProjectMemberResponseDto)
   async findAll(
     @Param('projectId', ParseIntPipe) projectId: number,
     @Query() query: ListProjectMembersQueryDto,

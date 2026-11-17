@@ -11,6 +11,8 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
+import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
 import { toPaginated } from '../common/dto/paginated-response.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';
@@ -21,6 +23,7 @@ import {
 } from './dto/user-response.dto';
 import { UsersService } from './users.service';
 
+@ApiTags('Users')
 @Controller('task-management/users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -31,6 +34,7 @@ export class UsersController {
   }
 
   @Get()
+  @ApiPaginatedResponse(UserResponseDto)
   async findAll(
     @Query() query: ListUsersQueryDto,
   ): Promise<PaginatedUsersResponseDto> {

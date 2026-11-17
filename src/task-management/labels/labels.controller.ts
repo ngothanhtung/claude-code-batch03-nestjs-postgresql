@@ -10,11 +10,13 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { CreateLabelDto } from './dto/create-label.dto';
 import { LabelResponseDto } from './dto/label-response.dto';
 import { UpdateLabelDto } from './dto/update-label.dto';
 import { LabelsService } from './labels.service';
 
+@ApiTags('Labels')
 @Controller('task-management/projects/:projectId/labels')
 export class LabelsController {
   constructor(private readonly labelsService: LabelsService) {}

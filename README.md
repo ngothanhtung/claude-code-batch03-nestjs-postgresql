@@ -44,6 +44,22 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
+## API documentation (OpenAPI + Scalar)
+
+With the server running:
+
+- **http://localhost:3000/docs** — interactive [Scalar](https://scalar.com/) API reference
+  (try requests, copy client snippets, download the spec).
+- **http://localhost:3000/openapi.json** — raw OpenAPI 3.0 document.
+
+The spec is generated at startup by `@nestjs/swagger` (see `src/openapi.ts`). The Nest CLI
+swagger plugin (`nest-cli.json`) builds schemas straight from the DTOs: types, enums, nullability,
+class-validator rules (lengths, min/max, formats) and `/** JSDoc */` comments become descriptions,
+so plain DTO properties need no `@ApiProperty()`. Use `@ApiPaginatedResponse(Dto)` on list
+endpoints so the `{ data, meta }` envelope is documented.
+
+> The plugin runs only through `nest build` / `nest start`, so the docs reflect DTO changes after a rebuild.
+
 ## Run tests
 
 ```bash

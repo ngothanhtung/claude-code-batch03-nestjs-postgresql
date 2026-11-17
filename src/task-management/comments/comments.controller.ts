@@ -11,6 +11,8 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
+import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
 import { toPaginated } from '../common/dto/paginated-response.dto';
 import { CommentsService } from './comments.service';
 import {
@@ -21,6 +23,7 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { ListCommentsQueryDto } from './dto/list-comments-query.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 
+@ApiTags('Comments')
 @Controller('task-management/tasks/:taskId/comments')
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
@@ -36,6 +39,7 @@ export class CommentsController {
   }
 
   @Get()
+  @ApiPaginatedResponse(CommentResponseDto)
   async findAll(
     @Param('taskId', ParseIntPipe) taskId: number,
     @Query() query: ListCommentsQueryDto,

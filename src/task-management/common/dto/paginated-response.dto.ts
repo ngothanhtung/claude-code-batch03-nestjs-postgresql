@@ -1,9 +1,14 @@
 import { PaginationQueryDto } from './pagination-query.dto';
 
-export interface PaginationMeta {
+/** Pagination details returned alongside every list endpoint. */
+export class PaginationMeta {
+  /** Current page (1-based). */
   page: number;
+  /** Page size requested. */
   limit: number;
+  /** Total number of matching items. */
   total: number;
+  /** Total number of pages for the given limit. */
   totalPages: number;
 }
 

@@ -9,10 +9,12 @@ import {
   ParseIntPipe,
   Post,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { AttachmentsService } from './attachments.service';
 import { AttachmentResponseDto } from './dto/attachment-response.dto';
 import { CreateAttachmentDto } from './dto/create-attachment.dto';
 
+@ApiTags('Attachments')
 @Controller('task-management/tasks/:taskId/attachments')
 export class AttachmentsController {
   constructor(private readonly attachmentsService: AttachmentsService) {}

@@ -12,6 +12,8 @@ import {
   Put,
   Query,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
+import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
 import { toPaginated } from '../common/dto/paginated-response.dto';
 import { LabelResponseDto } from '../labels/dto/label-response.dto';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -25,6 +27,7 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { TaskLabelsService } from './task-labels.service';
 import { TasksService } from './tasks.service';
 
+@ApiTags('Tasks')
 @Controller('task-management/tasks')
 export class TasksController {
   constructor(
@@ -38,6 +41,7 @@ export class TasksController {
   }
 
   @Get()
+  @ApiPaginatedResponse(TaskResponseDto)
   async findAll(
     @Query() query: ListTasksQueryDto,
   ): Promise<PaginatedTasksResponseDto> {
