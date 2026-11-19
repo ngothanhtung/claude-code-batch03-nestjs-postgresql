@@ -2,7 +2,6 @@ import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsEmail,
-  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -10,10 +9,12 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
-import { UserRole } from '../../../database/enums';
 import { trim, trimLower } from '../../common/transforms';
 
-/** All fields optional; `avatarUrl: null` clears the avatar. */
+/**
+ * All fields optional; `avatarUrl: null` clears the avatar.
+ * Roles are changed via `PUT /task-management/users/:id/roles`.
+ */
 export class UpdateUserDto {
   @IsOptional()
   @Transform(trim)
@@ -38,11 +39,6 @@ export class UpdateUserDto {
   @Transform(trim)
   @IsUrl()
   avatarUrl?: string | null;
-
-  // TODO: restrict to admins once authentication/guards are in place.
-  @IsOptional()
-  @IsEnum(UserRole)
-  role?: UserRole;
 
   @IsOptional()
   @IsBoolean()

@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
 import databaseConfig from './config/database.config';
 import { TaskManagementModule } from './task-management/task-management.module';
 
@@ -17,6 +18,7 @@ import { TaskManagementModule } from './task-management/task-management.module';
       }),
     }),
     TaskManagementModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

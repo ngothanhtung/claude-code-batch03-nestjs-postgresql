@@ -8,6 +8,7 @@ type RepositoryMethod =
   | 'findOne'
   | 'findOneBy'
   | 'findAndCount'
+  | 'count'
   | 'existsBy'
   | 'update'
   | 'delete'
@@ -28,6 +29,7 @@ export function createMockRepository(): MockRepository {
     findOne: jest.fn(),
     findOneBy: jest.fn(),
     findAndCount: jest.fn(),
+    count: jest.fn(),
     existsBy: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),

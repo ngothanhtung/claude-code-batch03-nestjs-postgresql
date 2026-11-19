@@ -6,7 +6,8 @@ import {
   MockRepository,
   pgError,
 } from '../../../test/helpers/unit';
-import { UserRole } from '../../database/enums';
+import { RoleName } from '../../database/enums';
+import { RolesService } from '../roles/roles.service';
 import { PgErrorCode } from '../common/pg-error';
 import { User } from './entities/user.entity';
 import { PasswordHasher } from './password-hasher';
@@ -16,6 +17,8 @@ describe('UsersService', () => {
   let service: UsersService;
   let repo: MockRepository;
   const hasher = { hash: jest.fn() };
+  const rolesService = { findByNames: jest.fn() };
+  const role = (name: RoleName) => ({ id: name.length, name });
 
   beforeEach(async () => {
     jest.resetAllMocks();
@@ -24,12 +27,16 @@ describe('UsersService', () => {
     repo.save.mockImplementation((e: object) => Promise.resolve(e));
     repo.existsBy.mockResolvedValue(false);
     hasher.hash.mockResolvedValue('hashed');
+    rolesService.findByNames.mockImplementation((names: RoleName[]) =>
+      Promise.resolve(names.map(role)),
+    );
 
     const moduleRef = await Test.createTestingModule({
       providers: [
         UsersService,
         { provide: getRepositoryToken(User), useValue: repo },
         { provide: PasswordHasher, useValue: hasher },
+        { provide: RolesService, useValue: rolesService },
       ],
     }).compile();
     service = moduleRef.get(UsersService);
@@ -45,6 +52,15 @@ describe('UsersService', () => {
     expect(user).not.toHaveProperty('password');
   });
 
+  it('gives new accounts only the Members role', async () => {
+    const user = await service.create({
+      fullName: 'An',
+      email: 'an@x.vn',
+      password: 'secret123',
+    });
+    expect(user.roles).toEqual([role(RoleName.MEMBERS)]);
+  });
+
   it('maps a unique email violation (race) to 409', async () => {
     repo.save.mockRejectedValue(pgError(PgErrorCode.UNIQUE_VIOLATION));
     await expect(
@@ -52,19 +68,57 @@ describe('UsersService', () => {
     ).rejects.toThrow(new ConflictException('Email already in use'));
   });
 
-  it('updates role, isActive and avatarUrl', async () => {
-    const user = { id: 1, email: 'a@x.vn', role: UserRole.MEMBER } as User;
-    repo.findOneBy.mockResolvedValue(user);
-    await service.update(1, {
-      role: UserRole.ADMIN,
-      isActive: false,
-      avatarUrl: null,
+  it('updates isActive and avatarUrl', async () => {
+    const user = { id: 1, email: 'a@x.vn', isActive: true, roles: [] };
+    repo.findOne.mockResolvedValue(user);
+    await service.update(1, { isActive: false, avatarUrl: null });
+    expect(user).toMatchObject({ isActive: false, avatarUrl: null });
+  });
+
+  describe('setRoles', () => {
+    const admin = () => ({
+      id: 1,
+      isActive: true,
+      roles: [role(RoleName.ADMINISTRATORS), role(RoleName.MEMBERS)],
     });
-    expect(user).toMatchObject({
-      role: UserRole.ADMIN,
-      isActive: false,
-      avatarUrl: null,
+
+    it('replaces the roles and always keeps Members', async () => {
+      repo.findOne.mockResolvedValue({ id: 2, isActive: true, roles: [] });
+      const user = await service.setRoles(2, { roles: [RoleName.MANAGERS] });
+      expect(user.roles?.map((r) => r.name)).toEqual([
+        RoleName.MANAGERS,
+        RoleName.MEMBERS,
+      ]);
     });
+
+    it('refuses to demote the last active administrator', async () => {
+      repo.findOne.mockResolvedValue(admin());
+      repo.count.mockResolvedValue(1);
+      await expect(service.setRoles(1, { roles: [] })).rejects.toThrow(
+        ConflictException,
+      );
+      expect(repo.save).not.toHaveBeenCalled();
+    });
+
+    it('allows demoting an admin when another active admin exists', async () => {
+      repo.findOne.mockResolvedValue(admin());
+      repo.count.mockResolvedValue(2);
+      await expect(service.setRoles(1, { roles: [] })).resolves.toBeDefined();
+    });
+  });
+
+  it.each([
+    ['deactivated', (s: UsersService) => s.update(1, { isActive: false })],
+    ['deleted', (s: UsersService) => s.remove(1)],
+  ])('refuses to let the last active admin be %s', async (_case, act) => {
+    repo.findOne.mockResolvedValue({
+      id: 1,
+      isActive: true,
+      roles: [role(RoleName.ADMINISTRATORS)],
+    });
+    repo.count.mockResolvedValue(1);
+    await expect(act(service)).rejects.toThrow(/last active administrator/);
+    expect(repo.delete).not.toHaveBeenCalled();
   });
 
   it.each([

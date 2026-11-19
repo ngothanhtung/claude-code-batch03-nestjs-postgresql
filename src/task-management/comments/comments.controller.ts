@@ -19,6 +19,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { CanCreate, CanModify } from '../../auth/decorators/roles.decorator';
 import { ApiErrorResponses } from '../common/decorators/api-error-responses.decorator';
 import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
 import { toPaginated } from '../common/dto/paginated-response.dto';
@@ -50,6 +51,7 @@ export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
   @Post()
+  @CanCreate()
   @ApiOperation({
     summary: 'Thêm bình luận vào task',
     description: [
@@ -128,6 +130,7 @@ export class CommentsController {
   }
 
   @Patch(':commentId')
+  @CanModify()
   @ApiOperation({
     summary: 'Sửa nội dung bình luận',
     description: [
@@ -156,6 +159,7 @@ export class CommentsController {
   }
 
   @Delete(':commentId')
+  @CanModify()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Xoá bình luận',

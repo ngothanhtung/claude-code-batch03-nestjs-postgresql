@@ -9,6 +9,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import {
@@ -19,11 +20,13 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { CanCreate, CanModify } from '../../auth/decorators/roles.decorator';
 import { ApiErrorResponses } from '../common/decorators/api-error-responses.decorator';
 import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
 import { toPaginated } from '../common/dto/paginated-response.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ListUsersQueryDto } from './dto/list-users-query.dto';
+import { SetUserRolesDto } from './dto/set-user-roles.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import {
   PaginatedUsersResponseDto,
@@ -43,6 +46,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
+  @CanCreate()
   @ApiOperation({
     summary: 'Tạo người dùng mới',
     description: [
@@ -111,6 +115,7 @@ export class UsersController {
   }
 
   @Patch(':id')
+  @CanModify()
   @ApiOperation({
     summary: 'Cập nhật người dùng',
     description: [
@@ -119,9 +124,8 @@ export class UsersController {
       '- Đổi `email`: email mới được chuẩn hoá chữ thường và phải chưa được dùng.',
       '- Đổi `password`: mật khẩu mới được băm lại trước khi lưu.',
       '- Gửi `avatarUrl: null` để xoá ảnh đại diện.',
-      '- `role` (`admin` | `member`) và `isActive` dùng để phân quyền / khoá tài khoản.',
-      '',
-      '> ⚠️ Hiện chưa có xác thực nên bất kỳ ai cũng có thể đổi `role`; sẽ giới hạn cho admin khi bổ sung auth.',
+      '- `isActive: false` khoá tài khoản (token hiện có mất hiệu lực ngay); không thể khoá quản trị viên đang hoạt động cuối cùng.',
+      '- Vai trò được đổi qua `PUT /task-management/users/{id}/roles`.',
     ].join('\n'),
   })
   @USER_ID_PARAM
@@ -132,7 +136,7 @@ export class UsersController {
   @ApiErrorResponses({
     400: '`id` hoặc dữ liệu đầu vào không hợp lệ.',
     404: 'Không tìm thấy người dùng.',
-    409: 'Email mới đã được sử dụng bởi một tài khoản khác.',
+    409: 'Email mới đã được sử dụng, hoặc đang khoá quản trị viên hoạt động cuối cùng.',
   })
   async update(
     @Param('id', ParseIntPipe) id: number,
@@ -141,7 +145,39 @@ export class UsersController {
     return UserResponseDto.fromEntity(await this.usersService.update(id, dto));
   }
 
+  @Put(':id/roles')
+  @CanModify()
+  @ApiOperation({
+    summary: 'Gán vai trò cho người dùng',
+    description: [
+      '**Thay thế toàn bộ** vai trò của người dùng bằng danh sách gửi lên.',
+      '',
+      '- `Members` là vai trò nền nên **luôn được giữ**, kể cả khi không gửi.',
+      '- Không thể gỡ `Administrators` khỏi quản trị viên đang hoạt động cuối cùng.',
+      '- Có hiệu lực ngay ở request kế tiếp (vai trò được đọc từ DB, không nằm trong JWT).',
+    ].join('\n'),
+  })
+  @USER_ID_PARAM
+  @ApiOkResponse({
+    description: 'Người dùng sau khi cập nhật vai trò.',
+    type: UserResponseDto,
+  })
+  @ApiErrorResponses({
+    400: '`id` không hợp lệ hoặc có vai trò không thuộc `Administrators` / `Managers` / `Members`.',
+    404: 'Không tìm thấy người dùng.',
+    409: 'Đang gỡ `Administrators` khỏi quản trị viên hoạt động cuối cùng.',
+  })
+  async setRoles(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: SetUserRolesDto,
+  ): Promise<UserResponseDto> {
+    return UserResponseDto.fromEntity(
+      await this.usersService.setRoles(id, dto),
+    );
+  }
+
   @Delete(':id')
+  @CanModify()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Xoá người dùng',
@@ -164,7 +200,7 @@ export class UsersController {
   @ApiErrorResponses({
     400: '`id` không phải số nguyên hợp lệ.',
     404: 'Không tìm thấy người dùng.',
-    409: 'Người dùng vẫn sở hữu dự án hoặc đã tạo task nên không thể xoá.',
+    409: 'Người dùng vẫn sở hữu dự án, đã tạo task, hoặc là quản trị viên hoạt động cuối cùng nên không thể xoá.',
   })
   async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
     await this.usersService.remove(id);

@@ -21,6 +21,7 @@
     "typeorm": "typeorm-ts-node-commonjs -d src/database/data-source.ts",
     "migration:generate": "npm run typeorm -- migration:generate src/database/migrations/$npm_config_name",
     "seed": "ts-node src/database/seeds/task-management.seed.ts",
+    "user:grant-role": "ts-node src/database/scripts/grant-role.ts",
     "migration:create": "typeorm-ts-node-commonjs migration:create src/database/migrations/$npm_config_name",
     "migration:run": "npm run typeorm -- migration:run",
     "migration:revert": "npm run typeorm -- migration:revert",
@@ -30,6 +31,7 @@
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^12.1.1",
     "@nestjs/core": "^11.0.1",
+    "@nestjs/jwt": "^12.0.5",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/swagger": "^11.4.8",
     "@nestjs/typeorm": "^12.0.3",
@@ -96,7 +98,7 @@
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
     "transformIgnorePatterns": [
-      "/node_modules/(?!(@nestjs/typeorm|@nestjs/config)/)"
+      "/node_modules/(?!(@nestjs/typeorm|@nestjs/config|@nestjs/jwt)/)"
     ],
     "moduleNameMapper": {
       "/typeorm-compat\\.js$": "<rootDir>/../test/shims/typeorm-compat.js"

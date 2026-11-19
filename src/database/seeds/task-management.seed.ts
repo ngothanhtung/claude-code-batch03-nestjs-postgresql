@@ -16,6 +16,7 @@ import { Comment } from '../../task-management/comments/entities/comment.entity'
 import { Label } from '../../task-management/labels/entities/label.entity';
 import { ProjectMember } from '../../task-management/project-members/entities/project-member.entity';
 import { Project } from '../../task-management/projects/entities/project.entity';
+import { Role } from '../../task-management/roles/entities/role.entity';
 import { Task } from '../../task-management/tasks/entities/task.entity';
 import { User } from '../../task-management/users/entities/user.entity';
 import { PasswordHasher } from '../../task-management/users/password-hasher';
@@ -25,7 +26,7 @@ import {
   ProjectStatus,
   TaskPriority,
   TaskStatus,
-  UserRole,
+  RoleName,
 } from '../enums';
 import {
   ATTACHMENTS,
@@ -109,6 +110,15 @@ async function removePreviousSeed(m: EntityManager): Promise<number> {
 
 async function seedUsers(m: EntityManager): Promise<Map<string, User>> {
   const hasher = new PasswordHasher();
+  const roles = new Map(
+    (await m.getRepository(Role).find()).map((r) => [r.name, r]),
+  );
+  const rolesFor = (extra: RoleName[] = []) =>
+    [RoleName.MEMBERS, ...extra].map((name) => {
+      const role = roles.get(name);
+      if (!role) throw new Error(`Role ${name} missing — run migrations`);
+      return role;
+    });
   const users = await m.getRepository(User).save(
     await Promise.all(
       USERS.map(async (u) => {
@@ -119,7 +129,7 @@ async function seedUsers(m: EntityManager): Promise<Map<string, User>> {
           email,
           passwordHash: await hasher.hash(SEED_PASSWORD),
           avatarUrl: `https://i.pravatar.cc/150?u=${email}`,
-          role: u.admin ? UserRole.ADMIN : UserRole.MEMBER,
+          roles: rolesFor(u.roles),
           isActive: !u.inactive,
           createdAt,
           updatedAt: createdAt,

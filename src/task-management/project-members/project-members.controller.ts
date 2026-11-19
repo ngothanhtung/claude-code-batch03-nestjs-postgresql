@@ -19,6 +19,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { CanCreate, CanModify } from '../../auth/decorators/roles.decorator';
 import { ApiErrorResponses } from '../common/decorators/api-error-responses.decorator';
 import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
 import { toPaginated } from '../common/dto/paginated-response.dto';
@@ -51,6 +52,7 @@ export class ProjectMembersController {
   constructor(private readonly membersService: ProjectMembersService) {}
 
   @Post()
+  @CanCreate()
   @ApiOperation({
     summary: 'Thêm thành viên vào dự án',
     description: [
@@ -136,6 +138,7 @@ export class ProjectMembersController {
   }
 
   @Patch(':userId')
+  @CanModify()
   @ApiOperation({
     summary: 'Đổi vai trò thành viên',
     description:
@@ -161,6 +164,7 @@ export class ProjectMembersController {
   }
 
   @Delete(':userId')
+  @CanModify()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Xoá thành viên khỏi dự án',

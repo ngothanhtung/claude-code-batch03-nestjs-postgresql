@@ -20,6 +20,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { CanCreate, CanModify } from '../../auth/decorators/roles.decorator';
 import { ApiErrorResponses } from '../common/decorators/api-error-responses.decorator';
 import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
 import { toPaginated } from '../common/dto/paginated-response.dto';
@@ -56,6 +57,7 @@ export class TasksController {
   ) {}
 
   @Post()
+  @CanCreate()
   @ApiOperation({
     summary: 'Tạo task mới',
     description: [
@@ -137,6 +139,7 @@ export class TasksController {
   }
 
   @Patch(':id')
+  @CanModify()
   @ApiOperation({
     summary: 'Cập nhật task',
     description: [
@@ -169,6 +172,7 @@ export class TasksController {
   }
 
   @Delete(':id')
+  @CanModify()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Xoá task',
@@ -215,6 +219,7 @@ export class TasksController {
   }
 
   @Put(':id/labels')
+  @CanModify()
   @ApiOperation({
     summary: 'Thay thế toàn bộ nhãn của task',
     description: [
@@ -245,6 +250,7 @@ export class TasksController {
   }
 
   @Post(':id/labels/:labelId')
+  @CanCreate()
   @ApiOperation({
     summary: 'Gắn một nhãn vào task',
     description:
@@ -272,6 +278,7 @@ export class TasksController {
   }
 
   @Delete(':id/labels/:labelId')
+  @CanModify()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Gỡ một nhãn khỏi task',

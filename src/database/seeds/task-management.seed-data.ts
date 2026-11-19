@@ -1,4 +1,4 @@
-import { MemberRole, ProjectStatus, TaskPriority } from '../enums';
+import { MemberRole, ProjectStatus, RoleName, TaskPriority } from '../enums';
 
 /** Every seeded user has this e-mail domain; re-running the seed replaces them. */
 export const SEED_EMAIL_DOMAIN = 'seed.taskflow.vn';
@@ -7,14 +7,15 @@ export const SEED_PASSWORD = 'Password123!';
 export interface SeedUser {
   key: string;
   fullName: string;
-  admin?: boolean;
+  /** Extra RBAC roles; every seed user also gets `Members`. */
+  roles?: RoleName[];
   inactive?: boolean;
 }
 
 export const USERS: SeedUser[] = [
-  { key: 'an', fullName: 'Nguyễn Văn An', admin: true },
-  { key: 'binh', fullName: 'Trần Thị Bình' },
-  { key: 'cuong', fullName: 'Lê Minh Cường' },
+  { key: 'an', fullName: 'Nguyễn Văn An', roles: [RoleName.ADMINISTRATORS] },
+  { key: 'binh', fullName: 'Trần Thị Bình', roles: [RoleName.MANAGERS] },
+  { key: 'cuong', fullName: 'Lê Minh Cường', roles: [RoleName.MANAGERS] },
   { key: 'dung', fullName: 'Phạm Thu Dung' },
   { key: 'em', fullName: 'Hoàng Gia Em' },
   { key: 'giang', fullName: 'Vũ Hương Giang' },

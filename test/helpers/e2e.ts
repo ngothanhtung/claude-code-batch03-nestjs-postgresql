@@ -5,6 +5,7 @@ import { DataSource } from 'typeorm';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/app.setup';
 import { databaseConfig } from '../../src/config/database.config';
+import { RoleName } from '../../src/database/enums';
 
 const TABLES = [
   'attachments',
@@ -14,7 +15,9 @@ const TABLES = [
   'tasks',
   'project_members',
   'projects',
+  'user_roles',
   'users',
+  // `roles` is NOT truncated: its 3 fixed rows come from the AddRbacRoles migration.
 ];
 
 /**
@@ -69,4 +72,21 @@ export async function createTestApp(): Promise<INestApplication<App>> {
   configureApp(app);
   await app.init();
   return app;
+}
+
+/**
+ * Grants roles straight in the DB (like `npm run user:grant-role`) — needed
+ * to create the first administrator, since only admins can assign roles.
+ */
+export async function grantRoles(
+  app: INestApplication,
+  userId: number,
+  ...roles: RoleName[]
+): Promise<void> {
+  await app.get(DataSource).query(
+    `INSERT INTO user_roles (user_id, role_id)
+     SELECT $1, id FROM roles WHERE name = ANY($2)
+     ON CONFLICT DO NOTHING`,
+    [userId, roles],
+  );
 }

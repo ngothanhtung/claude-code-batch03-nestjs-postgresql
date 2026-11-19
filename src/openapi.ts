@@ -1,5 +1,12 @@
 import { INestApplication } from '@nestjs/common';
-import { DocumentBuilder, OpenAPIObject, SwaggerModule } from '@nestjs/swagger';
+import {
+  DocumentBuilder,
+  getSchemaPath,
+  OpenAPIObject,
+  SwaggerModule,
+} from '@nestjs/swagger';
+import { OPENAPI_PUBLIC_EXTENSION } from './auth/decorators/public.decorator';
+import { ErrorResponseDto } from './task-management/common/dto/error-response.dto';
 import { apiReference } from '@scalar/nestjs-api-reference';
 
 export const OPENAPI_JSON_PATH = '/openapi.json';
@@ -23,8 +30,14 @@ bình luận và tệp đính kèm.
 - **Định dạng lỗi:** \`{ statusCode, message, error }\`; với lỗi validate,
   \`message\` là mảng các thông điệp.
 - **Xoá thành công** trả về \`204 No Content\`.
-- Hiện **chưa có xác thực**; các trường như \`createdBy\`, \`userId\`,
-  \`uploadedBy\` tạm thời được truyền trong body.
+- **Xác thực:** JWT. Lấy token qua \`POST /auth/login\` hoặc
+  \`POST /auth/register\`, gửi kèm header \`Authorization: Bearer <accessToken>\`
+  với **mọi** endpoint, trừ \`register\`, \`login\`, \`refresh\`. Access token hết hạn sau 15 phút — dùng
+  \`POST /auth/refresh\` để lấy token mới.
+- **Phân quyền (RBAC):** mọi người dùng đã đăng nhập (\`Members\`) được **xem**;
+  tạo mới (\`POST\`) cần \`Administrators\` hoặc \`Managers\`; cập nhật / xoá
+  (\`PATCH\`, \`PUT\`, \`DELETE\`) chỉ dành cho \`Administrators\`. Thiếu quyền
+  trả về \`403\`.
 `.trim();
 
 export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
@@ -33,7 +46,23 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
     .setDescription(API_DESCRIPTION)
     .setVersion(process.env.npm_package_version ?? '0.0.1')
     .addServer(`http://localhost:${process.env.PORT ?? 3000}`, 'Local')
-    .addTag('Users', 'Quản lý tài khoản người dùng.')
+    .addBearerAuth({
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+      description: 'Access token từ `POST /auth/login`.',
+    })
+    // Every operation requires a JWT unless marked @Public() (security: []).
+    .addSecurityRequirements('bearer')
+    .addTag(
+      'Auth',
+      'Đăng ký, đăng nhập, làm mới token và thông tin người dùng hiện tại.',
+    )
+    .addTag('Users', 'Quản lý tài khoản người dùng và vai trò của họ.')
+    .addTag(
+      'Roles',
+      'Ba vai trò hệ thống cố định: `Administrators`, `Managers`, `Members`.',
+    )
     .addTag('Projects', 'Quản lý dự án và chủ sở hữu dự án.')
     .addTag(
       'Project members',
@@ -56,7 +85,38 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
     operationIdFactory: (controllerKey, methodKey) =>
       `${controllerKey.replace(/Controller$/, '')}_${methodKey}`,
   });
-  return numbersToIntegers(document);
+  return applySecurity(numbersToIntegers(document));
+}
+
+/**
+ * `@Public()` operations get `security: []` (swagger drops empty security
+ * metadata, hence the extension marker); every other operation inherits the
+ * global bearer requirement and gets a documented 401.
+ */
+function applySecurity(document: OpenAPIObject): OpenAPIObject {
+  for (const pathItem of Object.values(document.paths)) {
+    for (const method of ['get', 'put', 'post', 'delete', 'patch'] as const) {
+      const operation = pathItem[method];
+      if (!operation) continue;
+      const extensions = operation as unknown as Record<string, unknown>;
+      if (extensions[OPENAPI_PUBLIC_EXTENSION]) {
+        delete extensions[OPENAPI_PUBLIC_EXTENSION];
+        operation.security = [];
+        continue;
+      }
+      if (operation.responses['401']) continue;
+      operation.responses['401'] = {
+        description:
+          'Thiếu access token, token không hợp lệ/hết hạn, hoặc tài khoản đã bị khoá.',
+        content: {
+          'application/json': {
+            schema: { $ref: getSchemaPath(ErrorResponseDto) },
+          },
+        },
+      };
+    }
+  }
+  return document;
 }
 
 /**

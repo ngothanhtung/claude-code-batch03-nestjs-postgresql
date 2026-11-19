@@ -19,6 +19,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { CanCreate, CanModify } from '../../auth/decorators/roles.decorator';
 import { ApiErrorResponses } from '../common/decorators/api-error-responses.decorator';
 import { ApiPaginatedResponse } from '../common/decorators/api-paginated-response.decorator';
 import { toPaginated } from '../common/dto/paginated-response.dto';
@@ -43,6 +44,7 @@ export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
   @Post()
+  @CanCreate()
   @ApiOperation({
     summary: 'Tạo dự án mới',
     description: [
@@ -115,6 +117,7 @@ export class ProjectsController {
   }
 
   @Patch(':id')
+  @CanModify()
   @ApiOperation({
     summary: 'Cập nhật dự án',
     description: [
@@ -146,6 +149,7 @@ export class ProjectsController {
   }
 
   @Delete(':id')
+  @CanModify()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Xoá dự án',

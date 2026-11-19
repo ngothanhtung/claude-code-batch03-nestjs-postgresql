@@ -18,6 +18,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { CanCreate, CanModify } from '../../auth/decorators/roles.decorator';
 import { ApiErrorResponses } from '../common/decorators/api-error-responses.decorator';
 import { CreateLabelDto } from './dto/create-label.dto';
 import { LabelResponseDto } from './dto/label-response.dto';
@@ -43,6 +44,7 @@ export class LabelsController {
   constructor(private readonly labelsService: LabelsService) {}
 
   @Post()
+  @CanCreate()
   @ApiOperation({
     summary: 'Tạo nhãn trong dự án',
     description: [
@@ -115,6 +117,7 @@ export class LabelsController {
   }
 
   @Patch(':labelId')
+  @CanModify()
   @ApiOperation({
     summary: 'Cập nhật nhãn',
     description:
@@ -141,6 +144,7 @@ export class LabelsController {
   }
 
   @Delete(':labelId')
+  @CanModify()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Xoá nhãn',

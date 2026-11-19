@@ -1,7 +1,8 @@
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { createTestApp, resetTestDatabase } from './helpers/e2e';
+import { RoleName } from '../src/database/enums';
+import { createTestApp, grantRoles, resetTestDatabase } from './helpers/e2e';
 
 /**
  * End-to-end flow over every Task Management resource against a real
@@ -10,7 +11,11 @@ import { createTestApp, resetTestDatabase } from './helpers/e2e';
  */
 describe('Task Management (e2e)', () => {
   let app: INestApplication<App>;
-  const api = () => request(app.getHttpServer());
+  /** Unauthenticated client. */
+  const anonymous = () => request(app.getHttpServer());
+  /** Client that sends the owner's access token on every request. */
+  let agent: ReturnType<typeof request.agent>;
+  const api = () => agent;
   const base = '/task-management';
 
   // ids created during the flow
@@ -38,6 +43,24 @@ describe('Task Management (e2e)', () => {
   beforeAll(async () => {
     await resetTestDatabase();
     app = await createTestApp();
+
+    // Every endpoint except register/login/refresh requires a JWT, so the
+    // first user signs up through /auth/register, is made an administrator
+    // (directly in the DB, like `npm run user:grant-role`) and its token is
+    // reused. RBAC rules themselves are covered by rbac.e2e-spec.ts.
+    const res = await anonymous()
+      .post('/auth/register')
+      .send({
+        fullName: 'Owner',
+        email: 'owner@example.com',
+        password: 'Password123!',
+      })
+      .expect(201);
+    owner = res.body.user.id;
+    await grantRoles(app, owner, RoleName.ADMINISTRATORS);
+    agent = request
+      .agent(app.getHttpServer())
+      .set('Authorization', `Bearer ${res.body.accessToken}`);
   });
 
   afterAll(async () => {
@@ -46,20 +69,47 @@ describe('Task Management (e2e)', () => {
 
   describe('setup: users, projects, members', () => {
     it('creates users with the new columns', async () => {
-      owner = await createUser('Owner', 'owner@example.com');
       member = await createUser('Member', 'member@example.com');
       outsider = await createUser('Outsider', 'outsider@example.com');
 
       const res = await api()
         .patch(`${base}/users/${owner}`)
-        .send({ role: 'admin', avatarUrl: 'https://cdn.example.com/o.png' })
+        .send({ avatarUrl: 'https://cdn.example.com/o.png' })
         .expect(200);
       expect(res.body).toMatchObject({
-        role: 'admin',
+        roles: expect.arrayContaining([
+          RoleName.ADMINISTRATORS,
+          RoleName.MEMBERS,
+        ]) as unknown,
         isActive: true,
         avatarUrl: 'https://cdn.example.com/o.png',
       });
       expect(res.body).not.toHaveProperty('passwordHash');
+
+      // A second admin, so deleting `owner` below hits the FK RESTRICT rule
+      // rather than the last-active-administrator protection.
+      await api()
+        .put(`${base}/users/${outsider}/roles`)
+        .send({ roles: [RoleName.ADMINISTRATORS] })
+        .expect(200);
+    });
+
+    it('requires a JWT on every task-management endpoint', async () => {
+      const routes = [
+        anonymous().get(`${base}/users`),
+        anonymous().post(`${base}/users`).send({}),
+        anonymous().get(`${base}/projects`),
+        anonymous().get(`${base}/projects/1/members`),
+        anonymous().get(`${base}/projects/1/labels`),
+        anonymous().get(`${base}/projects/1/tasks/due-soon`),
+        anonymous().get(`${base}/tasks`),
+        anonymous().get(`${base}/tasks/1/comments`),
+        anonymous().get(`${base}/tasks/1/attachments`),
+        anonymous().get(`${base}/users/1/tasks`),
+      ];
+      for (const req of routes) {
+        await req.expect(401);
+      }
     });
 
     it('creates projects and adds a member', async () => {

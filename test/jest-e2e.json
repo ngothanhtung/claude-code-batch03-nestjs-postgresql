@@ -12,7 +12,7 @@
     ]
   },
   "transformIgnorePatterns": [
-    "/node_modules/(?!(@nestjs/typeorm|@nestjs/config)/)"
+    "/node_modules/(?!(@nestjs/typeorm|@nestjs/config|@nestjs/jwt)/)"
   ],
   "testTimeout": 30000,
   "moduleNameMapper": {

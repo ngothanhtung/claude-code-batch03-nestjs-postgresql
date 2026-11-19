@@ -2,7 +2,7 @@ import { applyDecorators } from '@nestjs/common';
 import { ApiResponse } from '@nestjs/swagger';
 import { ErrorResponseDto } from '../dto/error-response.dto';
 
-type ErrorStatus = 400 | 404 | 409;
+type ErrorStatus = 400 | 401 | 403 | 404 | 409;
 
 /**
  * Documents the error responses of a handler, all sharing the NestJS

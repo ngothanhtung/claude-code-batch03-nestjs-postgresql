@@ -17,6 +17,7 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
+import { CanCreate, CanModify } from '../../auth/decorators/roles.decorator';
 import { ApiErrorResponses } from '../common/decorators/api-error-responses.decorator';
 import { AttachmentsService } from './attachments.service';
 import { AttachmentResponseDto } from './dto/attachment-response.dto';
@@ -41,6 +42,7 @@ export class AttachmentsController {
   constructor(private readonly attachmentsService: AttachmentsService) {}
 
   @Post()
+  @CanCreate()
   @ApiOperation({
     summary: 'Đăng ký tệp đính kèm cho task',
     description: [
@@ -122,6 +124,7 @@ export class AttachmentsController {
   }
 
   @Delete(':attachmentId')
+  @CanModify()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Xoá tệp đính kèm',

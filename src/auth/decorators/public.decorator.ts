@@ -1,0 +1,15 @@
+import { applyDecorators, SetMetadata } from '@nestjs/common';
+import { ApiExtension } from '@nestjs/swagger';
+
+export const IS_PUBLIC_KEY = 'auth:isPublic';
+
+/** OpenAPI marker turned into `security: []` by `buildOpenApiDocument`. */
+export const OPENAPI_PUBLIC_EXTENSION = 'x-public';
+
+/** Opts a handler (or controller) out of the global JWT guard. */
+export function Public() {
+  return applyDecorators(
+    SetMetadata(IS_PUBLIC_KEY, true),
+    ApiExtension(OPENAPI_PUBLIC_EXTENSION, true),
+  );
+}
